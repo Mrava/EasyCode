@@ -12,17 +12,11 @@ import com.sjhy.plugin.constants.MsgValue;
 import com.sjhy.plugin.entity.TableInfo;
 import com.sjhy.plugin.entity.Template;
 import com.sjhy.plugin.entity.TemplateGroup;
-import com.sjhy.plugin.tool.CacheDataUtils;
-import com.sjhy.plugin.tool.ConfigInfo;
-import com.sjhy.plugin.tool.TableInfoUtils;
-import com.sjhy.plugin.tool.VelocityUtils;
-import com.sjhy.plugin.tool.StringUtils;
+import com.sjhy.plugin.tool.*;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,7 +53,7 @@ public class SelectSavePath extends JDialog {
     /**
      * 路径字段
      */
-    private JTextField pathField;
+    private JTextField javaPathField;
     /**
      * 包选择按钮
      */
@@ -67,7 +61,7 @@ public class SelectSavePath extends JDialog {
     /**
      * 路径选择按钮
      */
-    private JButton pathChooseButton;
+    private JButton javaPathChooseButton;
     /**
      * 模板全选框
      */
@@ -75,23 +69,34 @@ public class SelectSavePath extends JDialog {
     /**
      * 模板面板
      */
-    private JPanel templatePanel;
+    private JPanel javaTemplatePanel;
     /**
      * 统一配置复选框
      */
     private JCheckBox unifiedConfig;
+    private JTextField htmlPathField;
+    private JButton htmlPathChooseButton;
+    private JPanel htmlTemplatePanel;
     /**
-     * 所有模板复选框
+     * java所有模板复选框
      */
-    private List<JCheckBox> checkBoxList = new ArrayList<>();
+    private List<JCheckBox> javaCheckBoxList = new ArrayList<>();
+    /**
+     * html所有模板复选框
+     */
+    private List<JRadioButton> htmlRadioBoxList = new ArrayList<>();
     /**
      * 数据缓存工具类
      */
     private CacheDataUtils cacheDataUtils = CacheDataUtils.getInstance();
     /**
-     * 模板组对象
+     * java模板组对象
      */
-    private TemplateGroup templateGroup;
+    private TemplateGroup javaTemplateGroup;
+    /**
+     * html模板组对象
+     */
+    private TemplateGroup htmlTemplateGroup;
     /**
      * 表信息工具
      */
@@ -102,7 +107,9 @@ public class SelectSavePath extends JDialog {
      */
     public SelectSavePath() {
         ConfigInfo configInfo = ConfigInfo.getInstance();
-        this.templateGroup = configInfo.getTemplateGroupMap().get(configInfo.getCurrTemplateGroupName());
+        this.javaTemplateGroup = configInfo.getJavaTemplateGroupMap().get(configInfo.getCurrJavaTemplateGroupName());
+        this.htmlTemplateGroup = configInfo.getHtmlTemplateGroupMap().get(configInfo.getCurrHtmlTemplateGroupName());
+
         init();
         setContentPane(contentPane);
         setModal(true);
@@ -130,10 +137,10 @@ public class SelectSavePath extends JDialog {
      *
      * @return 模板对象集合
      */
-    private List<Template> getSelectTemplate() {
+    private List<Template> getJavaSelectTemplate() {
         // 获取到已选择的复选框
         List<String> selectTemplateNameList = new ArrayList<>();
-        checkBoxList.forEach(jCheckBox -> {
+        javaCheckBoxList.forEach(jCheckBox -> {
             if (jCheckBox.isSelected()) {
                 selectTemplateNameList.add(jCheckBox.getText());
             }
@@ -143,7 +150,7 @@ public class SelectSavePath extends JDialog {
             return selectTemplateList;
         }
         // 将复选框转换成对应的模板对象
-        templateGroup.getElementList().forEach(template -> {
+        javaTemplateGroup.getElementList().forEach(template -> {
             if (selectTemplateNameList.contains(template.getName())) {
                 selectTemplateList.add(template);
             }
@@ -152,26 +159,58 @@ public class SelectSavePath extends JDialog {
     }
 
     /**
+     * 获取一选中的html 模板
+     *
+     * @return
+     */
+    private List<Template> getHtmlSelectTemplate() {
+        JRadioButton select = null;
+        for (JRadioButton radioButton : htmlRadioBoxList) {
+            if (radioButton.isSelected()) {
+                select = radioButton;
+                break;
+            }
+        }
+        List<Template> selectTemplateList = new ArrayList<>();
+        if (select == null) {
+            return selectTemplateList;
+        }
+        for (Template template : htmlTemplateGroup.getElementList()) {
+            if (select.getText().equals(template.getName())) {
+                selectTemplateList.add(template);
+            }
+        }
+        return selectTemplateList;
+    }
+
+    /**
      * 确认按钮回调事件
      */
     private void onOK() {
-        List<Template> selectTemplateList = getSelectTemplate();
+      /*  List<Template> selectJavaTemplateList = getJavaSelectTemplate();
         // 如果选择的模板是空的
-        if (selectTemplateList.isEmpty()) {
-            Messages.showWarningDialog("Can't Select Template!", MsgValue.TITLE_INFO);
+        if (selectJavaTemplateList.isEmpty()) {
+            Messages.showWarningDialog("Can't Select Java Template!", MsgValue.TITLE_INFO);
+            return;
+        }*/
+        String javaSavePath = javaPathField.getText();
+        if (StringUtils.isEmpty(javaSavePath)) {
+            Messages.showWarningDialog("Can't Select Save Java Path!", MsgValue.TITLE_INFO);
             return;
         }
-        String savePath = pathField.getText();
-        if (StringUtils.isEmpty(savePath)) {
-            Messages.showWarningDialog("Can't Select Save Path!", MsgValue.TITLE_INFO);
+        String htmlSavePath = htmlPathField.getText();
+        if (StringUtils.isEmpty(htmlSavePath)) {
+            Messages.showWarningDialog("Can't Select Html Save Path!", MsgValue.TITLE_INFO);
             return;
         }
         // 设置好配置信息
-        cacheDataUtils.setSavePath(savePath);
-        cacheDataUtils.setSelectTemplate(selectTemplateList);
+        cacheDataUtils.setSavePath(javaSavePath);
+        cacheDataUtils.setSelectTemplate(getJavaSelectTemplate());
         cacheDataUtils.setPackageName(packageField.getText());
         cacheDataUtils.setSelectModule(getSelectModule());
         cacheDataUtils.setUnifiedConfig(unifiedConfig.isSelected());
+        cacheDataUtils.setHtmlSavePath(htmlSavePath);
+        cacheDataUtils.setSelectHtmlTemplate(getHtmlSelectTemplate());
         // 生成代码
         VelocityUtils.getInstance().handler();
         // 关闭窗口
@@ -190,15 +229,25 @@ public class SelectSavePath extends JDialog {
      */
     private void init() {
         //添加模板组
-        checkBoxList.clear();
-        templatePanel.setLayout(new GridLayout(6, 2));
-        templateGroup.getElementList().forEach(template -> {
+        javaCheckBoxList.clear();
+        javaTemplatePanel.setLayout(new GridLayout(6, 2));
+        javaTemplateGroup.getElementList().forEach(template -> {
             JCheckBox checkBox = new JCheckBox(template.getName());
-            checkBoxList.add(checkBox);
-            templatePanel.add(checkBox);
+            javaCheckBoxList.add(checkBox);
+            javaTemplatePanel.add(checkBox);
+        });
+        htmlRadioBoxList.clear();
+        htmlTemplatePanel.setLayout(new GridLayout(4, 2));
+        ButtonGroup group = new ButtonGroup();
+        htmlTemplateGroup.getElementList().forEach(template -> {
+            JRadioButton radioButton = new JRadioButton(template.getName());
+            radioButton.setSelected(true);
+            htmlRadioBoxList.add(radioButton);
+            htmlTemplatePanel.add(radioButton);
+            group.add(radioButton);
         });
         //添加全选事件
-        allCheckBox.addActionListener(e -> checkBoxList.forEach(jCheckBox -> jCheckBox.setSelected(allCheckBox.isSelected())));
+        allCheckBox.addActionListener(e -> javaCheckBoxList.forEach(jCheckBox -> jCheckBox.setSelected(allCheckBox.isSelected())));
 
         //初始化Module选择
         for (Module module : cacheDataUtils.getModules()) {
@@ -227,18 +276,10 @@ public class SelectSavePath extends JDialog {
         refreshPath();
 
         //选择路径
-        pathChooseButton.addActionListener(e -> {
-            //将当前选中的model设置为基础路径
-            VirtualFile path = cacheDataUtils.getProject().getBaseDir();
-            Module module = getSelectModule();
-            if (module != null) {
-                path = VirtualFileManager.getInstance().findFileByUrl("file://" + new File(module.getModuleFilePath()).getParent());
-            }
-            VirtualFile virtualFile = FileChooser.chooseFile(FileChooserDescriptorFactory.createSingleFolderDescriptor(), cacheDataUtils.getProject(), path);
-            if (virtualFile != null) {
-                pathField.setText(virtualFile.getPath());
-            }
-        });
+        javaPathChooseButton.addActionListener(new PathChooseActionListener(javaPathField));
+
+        //选择html 生成路径
+        htmlPathChooseButton.addActionListener(new PathChooseActionListener(htmlPathField));
 
         // 获取选中的表信息（鼠标右键的那张表）
         TableInfo tableInfo = tableInfoUtils.handler(Collections.singletonList(cacheDataUtils.getSelectDbTable())).get(0);
@@ -249,15 +290,26 @@ public class SelectSavePath extends JDialog {
         if (!StringUtils.isEmpty(tableInfo.getSavePackageName())) {
             packageField.setText(tableInfo.getSavePackageName());
         }
-        String savePath = tableInfo.getSavePath();
+        javaPathField.setText(getSavePath(tableInfo.getSavePath()));
+        htmlPathField.setText(getSavePath(tableInfo.getHtmlSavePath()));
+    }
+
+    /**
+     * 获取默认选中的目录
+     *
+     * @param savePath
+     * @return
+     */
+    private String getSavePath(String savePath) {
         if (!StringUtils.isEmpty(savePath)) {
             // 判断是否需要凭借项目路径
             if (savePath.startsWith("./")) {
                 String projectPath = cacheDataUtils.getProject().getBasePath();
                 savePath = projectPath + savePath.substring(1);
             }
-            pathField.setText(savePath);
+
         }
+        return savePath;
     }
 
     /**
@@ -316,7 +368,7 @@ public class SelectSavePath extends JDialog {
         if (!StringUtils.isEmpty(packageName)) {
             path += "/" + packageName.replace(".", "/");
         }
-        pathField.setText(path);
+        javaPathField.setText(path);
     }
 
     /**
@@ -327,4 +379,31 @@ public class SelectSavePath extends JDialog {
         setLocationRelativeTo(null);
         this.setVisible(true);
     }
+
+    /**
+     * 路径选择监听器
+     */
+    class PathChooseActionListener implements ActionListener {
+        JTextField textField;
+
+        public PathChooseActionListener(JTextField textField) {
+            this.textField = textField;
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            //将当前选中的model设置为基础路径
+            VirtualFile path = cacheDataUtils.getProject().getBaseDir();
+            Module module = getSelectModule();
+            if (module != null) {
+                path = VirtualFileManager.getInstance().findFileByUrl("file://" + new File(module.getModuleFilePath()).getParent());
+            }
+            VirtualFile virtualFile = FileChooser.chooseFile(FileChooserDescriptorFactory.createSingleFolderDescriptor(), cacheDataUtils.getProject(), path);
+            if (virtualFile != null) {
+                textField.setText(virtualFile.getPath());
+            }
+        }
+    }
 }
+
+

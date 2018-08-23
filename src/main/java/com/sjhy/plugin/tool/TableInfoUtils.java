@@ -141,7 +141,7 @@ public class TableInfoUtils extends AbstractService {
             tableInfo.setSaveModelName(tableInfoConfig.getSaveModelName());
             tableInfo.setSavePackageName(tableInfoConfig.getSavePackageName());
             tableInfo.setSavePath(tableInfoConfig.getSavePath());
-
+            tableInfo.setHtmlSavePath(tableInfoConfig.getHtmlSavePath());
 
             if (CollectionUtil.isEmpty(tableInfoConfig.getFullColumn())) {
                 result.add(tableInfo);

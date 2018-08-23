@@ -10,10 +10,10 @@ import com.sjhy.plugin.entity.Callback;
 import com.sjhy.plugin.entity.GlobalConfig;
 import com.sjhy.plugin.entity.TableInfo;
 import com.sjhy.plugin.entity.Template;
-import com.sjhy.plugin.tool.StringUtils;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +51,7 @@ public class VelocityUtils {
     private VelocityUtils() {
         velocityEngine = new VelocityEngine();
         // 修复部分用户的velocity日志记录无权访问velocity.log文件问题
-        velocityEngine.setProperty( RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, "org.apache.velocity.runtime.log.Log4JLogChute" );
+        velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, "org.apache.velocity.runtime.log.Log4JLogChute");
         velocityEngine.setProperty("runtime.log.logsystem.log4j.logger", "velocity");
     }
 
@@ -210,17 +210,11 @@ public class VelocityUtils {
         ConfigInfo configInfo = ConfigInfo.getInstance();
         // 获取覆盖的表配置信息
         List<TableInfo> tableInfoList = coverConfigInfo();
-        List<Template> templateList = CloneUtils.getInstance().cloneList(cacheDataUtils.getSelectTemplate());
+        List<Template> javaTemplateList = CloneUtils.getInstance().cloneList(cacheDataUtils.getSelectTemplate());
+        List<Template> htmlTemplateList = CloneUtils.getInstance().cloneList(cacheDataUtils.getSelectHtmlTemplate());
         // 预处理加入全局变量
-        templateList.forEach(template -> {
-            String templateContent = template.getCode() + "\n";
-            for (GlobalConfig globalConfig : configInfo.getGlobalConfigGroupMap().get(configInfo.getCurrGlobalConfigGroupName()).getElementList()) {
-                // 需要替换两次，防止$在正则中出现问题
-                templateContent = templateContent.replaceAll("\\$!?\\{?" + globalConfig.getName() + "([^a-zA-Z0-9])}?", ":::{" + globalConfig.getName() + "}$1");
-                templateContent = templateContent.replace(":::{" + globalConfig.getName() + "}", globalConfig.getValue());
-            }
-            template.setCode(templateContent);
-        });
+        templateExe(configInfo, javaTemplateList);
+        templateExe(configInfo, htmlTemplateList);
         // 获取编码信息
         String encode = configInfo.getEncode();
         // 获取默认的配置信息
@@ -236,7 +230,7 @@ public class VelocityUtils {
             map.put("importList", getImportList(tableInfo));
             // 回调函数
             map.put("callback", callback);
-            templateList.forEach(template -> {
+            javaTemplateList.forEach(template -> {
                 // 获取保存路径
                 String savePath = cacheDataUtils.getSavePath();
                 // 生成代码并去除两端空格
@@ -268,10 +262,63 @@ public class VelocityUtils {
                 // 写入文件
                 fileUtils.write(file, content);
             });
+            htmlTemplateList.forEach(template -> {
+                // 获取保存路径
+                String savePath = cacheDataUtils.getHtmlSavePath();
+                debug("保存路径1：" + savePath);
+                // 生成代码并去除两端空格
+                String content = generate(template.getCode(), map, encode).trim();
+                //保存的文件名
+                String fileName = callback.getFileName();
+                //保存路径
+                String callbackSavePath = callback.getSavePath();
+                //是否使用回调中的保存路径
+                debug("callbackSavePath：" + callbackSavePath);
+                if (!StringUtils.isEmpty(callbackSavePath)) {
+                    // 判断是否需要凭借项目路径
+                    if (callbackSavePath.startsWith("./")) {
+                        callbackSavePath = projectPath + callbackSavePath.substring(1);
+                    }
+                    if (!createPath(callbackSavePath)) {
+                        return;
+                    }
+                    savePath = callbackSavePath;
+                }
+                // 当回调中没有保存文件名时
+                if (fileName == null) {
+                    fileName = tableInfo.getName() + "Default.html";
+                }
+                debug("保存路径2：" + savePath);
+                File file = new File(new File(savePath), fileName);
+                //覆盖或创建文件
+                if (!coverFile(file)) {
+                    return;
+                }
+                // 写入文件
+                fileUtils.write(file, content);
+            });
         });
         Messages.showMessageDialog("Code Generate Successful!", MsgValue.TITLE_INFO, Messages.getInformationIcon());
         //刷新整个项目
         VirtualFileManager.getInstance().syncRefresh();
+    }
+
+    /**
+     * 处理模板信息
+     *
+     * @param configInfo
+     * @param templateList
+     */
+    private void templateExe(ConfigInfo configInfo, List<Template> templateList) {
+        templateList.forEach(template -> {
+            String templateContent = template.getCode() + "\n";
+            for (GlobalConfig globalConfig : configInfo.getGlobalConfigGroupMap().get(configInfo.getCurrGlobalConfigGroupName()).getElementList()) {
+                // 需要替换两次，防止$在正则中出现问题
+                templateContent = templateContent.replaceAll("\\$!?\\{?" + globalConfig.getName() + "([^a-zA-Z0-9])}?", ":::{" + globalConfig.getName() + "}$1");
+                templateContent = templateContent.replace(":::{" + globalConfig.getName() + "}", globalConfig.getValue());
+            }
+            template.setCode(templateContent);
+        });
     }
 
     /**
@@ -290,49 +337,28 @@ public class VelocityUtils {
 
         AtomicBoolean isSave = new AtomicBoolean(false);
         List<TableInfo> tableInfoList = tableInfoUtils.handler(cacheDataUtils.getDbTableList());
+        final String javaSavePath = exePath(cacheDataUtils.getSavePath());
+        final String htmlSavePath = exePath(cacheDataUtils.getHtmlSavePath());
 
-
-        // 判断路径是否需要是由相对路径
-        String savePath = cacheDataUtils.getSavePath();
-        // 兼容Linux
-        if (savePath.contains("\\")) {
-            savePath = savePath.replace("\\", "/");
-            cacheDataUtils.setSavePath(savePath);
-        }
-        String projectPath = cacheDataUtils.getProject().getBasePath();
-        if (projectPath!=null) {
-            // 兼容Linux路径
-            if (projectPath.contains("\\")) {
-                projectPath = projectPath.replace("\\", "/");
-            }
-            if (savePath.indexOf(projectPath) == 0) {
-                savePath = savePath.substring(projectPath.length());
-                if (savePath.startsWith("/")) {
-                    savePath = "." + savePath;
-                } else {
-                    savePath = "./" + savePath;
-                }
-            }
-        }
-
-        final String finalSavePath = savePath;
 
         // 将选中表中的没有保存配置信息的表进行保存
         tableInfoList.forEach(tableInfo -> {
             // 输入当前表是选中表
             if (tableInfo.getObj() == cacheDataUtils.getSelectDbTable()) {
                 // 只要所有保存信息都没修改就不进行覆盖保存
-                if (Objects.equals(tableInfo.getSavePath(), finalSavePath) && Objects.equals(moduleName, tableInfo.getSaveModelName()) && Objects.equals(tableInfo.getSavePackageName(), cacheDataUtils.getPackageName())) {
+                if (Objects.equals(tableInfo.getHtmlSavePath(), htmlSavePath) && Objects.equals(tableInfo.getSavePath(), javaSavePath) && Objects.equals(moduleName, tableInfo.getSaveModelName()) && Objects.equals(tableInfo.getSavePackageName(), cacheDataUtils.getPackageName())) {
                     return;
                 }
             } else {
                 // 只要存在任意一项保存信息就不进行覆盖保存
-                if (!StringUtils.isEmpty(tableInfo.getSaveModelName()) || !StringUtils.isEmpty(tableInfo.getSavePath()) || !StringUtils.isEmpty(tableInfo.getSavePackageName())) {
+                if (!StringUtils.isEmpty(tableInfo.getSaveModelName()) || !StringUtils.isEmpty(tableInfo.getSavePath())
+                        || !StringUtils.isEmpty(tableInfo.getSavePackageName()) || StringUtils.isEmpty(tableInfo.getHtmlSavePath())) {
                     return;
                 }
             }
             // 进行覆盖保存
-            tableInfo.setSavePath(finalSavePath);
+            tableInfo.setSavePath(javaSavePath);
+            tableInfo.setHtmlSavePath(htmlSavePath);
             tableInfo.setSavePackageName(cacheDataUtils.getPackageName());
             tableInfo.setSaveModelName(moduleName);
             // 保存信息
@@ -347,6 +373,7 @@ public class VelocityUtils {
         if (cacheDataUtils.isUnifiedConfig()) {
             tableInfoList.forEach(tableInfo -> {
                 tableInfo.setSavePath(cacheDataUtils.getSavePath());
+                tableInfo.setHtmlSavePath(cacheDataUtils.getHtmlSavePath());
                 tableInfo.setSavePackageName(cacheDataUtils.getPackageName());
                 if (cacheDataUtils.getSelectModule() != null) {
                     tableInfo.setSaveModelName(cacheDataUtils.getSelectModule().getName());
@@ -354,6 +381,38 @@ public class VelocityUtils {
             });
         }
         return tableInfoList;
+    }
+
+    /**
+     * 处理保存路径
+     *
+     * @param savePath
+     * @return
+     */
+    @NotNull
+    private String exePath(String savePath) {
+        // 判断路径是否需要是由相对路径
+        // 兼容Linux
+        if (savePath.contains("\\")) {
+            savePath = savePath.replace("\\", "/");
+            cacheDataUtils.setSavePath(savePath);
+        }
+        String projectPath = cacheDataUtils.getProject().getBasePath();
+        if (projectPath != null) {
+            // 兼容Linux路径
+            if (projectPath.contains("\\")) {
+                projectPath = projectPath.replace("\\", "/");
+            }
+            if (savePath.indexOf(projectPath) == 0) {
+                savePath = savePath.substring(projectPath.length());
+                if (savePath.startsWith("/")) {
+                    savePath = "." + savePath;
+                } else {
+                    savePath = "./" + savePath;
+                }
+            }
+        }
+        return savePath;
     }
 
 
@@ -372,5 +431,9 @@ public class VelocityUtils {
             }
         });
         return result;
+    }
+
+    private void debug(String info) {
+//        Messages.showMessageDialog(info, "debug", Messages.getInformationIcon());
     }
 }

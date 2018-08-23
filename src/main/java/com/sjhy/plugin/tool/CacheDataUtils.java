@@ -7,6 +7,7 @@ import com.sjhy.plugin.entity.Template;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 缓存数据工具类
@@ -72,4 +73,16 @@ public class CacheDataUtils {
      * 是否统一配置
      */
     private boolean unifiedConfig;
+    /**
+     * 分组保存路径下的模板
+     */
+    private Map<String, List<Template>> pathTemplate;
+    /**
+     * html 保存路径
+     */
+    private String htmlSavePath;
+    /**
+     * 选中的所有的html模板
+     */
+    private List<Template> selectHtmlTemplate;
 }

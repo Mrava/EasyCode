@@ -1,0 +1,24 @@
+##设置回调
+$!callback.setFileName("MsgVo.java")
+$!callback.setSavePath($tool.append($tableInfo.savePath, "/vo"))
+
+#if($tableInfo.savePackageName)package $!{tableInfo.savePackageName}.#{end}vo;
+
+import lombok.Data;
+
+@Data
+public class MsgVo {
+    int code;
+    String msg;
+    Object data;
+
+    public MsgVo(int code, String msg, Object data) {
+        this.code = code;
+        this.msg = msg;
+        this.data = data;
+    }
+
+    public static MsgVo newInstance() {
+        return new MsgVo(200, "success", null);
+    }
+}

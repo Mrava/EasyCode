@@ -1,0 +1,28 @@
+##定义初始变量
+#set($tableName = $tool.append($tableInfo.name, "Api"))
+#set($tableDao = $tool.append($tableInfo.name, "Dao"))
+#set($tablePo = $tool.append($tableInfo.name, "Po"))
+#set($restMapping = $tool.append("${pro.rest.base-path}/api/",$tool.firstLowerCase($tableInfo.name)))
+##设置回调
+$!callback.setFileName($tool.append($tableName, ".java"))
+$!callback.setSavePath($tool.append($tableInfo.savePath, "/api"))
+
+#if($tableInfo.savePackageName)package $!{tableInfo.savePackageName}.#{end}api;
+import $!{tableInfo.savePackageName}.dao.*;
+import $!{tableInfo.savePackageName}.entity.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+
+/**
+#* $!{tableInfo.comment}($!{tableInfo.name})表控制层*#
+* ($!{tableInfo.name})表接口层
+*
+* @author $!author
+* @since $!time.currTime()
+*/
+@RestController
+@RequestMapping("$restMapping")
+public class $!{tableName} extends BaseApi<$tablePo, $tableDao> {
+
+}

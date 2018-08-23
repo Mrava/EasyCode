@@ -1,0 +1,25 @@
+$!callback.setFileName("index.html")
+$!callback.setSavePath($tool.append($tool.append($tableInfo.htmlSavePath, "/"),$tableInfo.name))
+<div id="$!tableInfo.name">
+    <template>
+        {{content}}
+        <li>{{li}}</li>
+        <el-button @click="visible = true">Button</el-button>
+        <el-dialog :visible.sync="visible" title="Hello world">
+            <p>Try Element</p>
+        </el-dialog>
+    </template>
+</div>
+<script type="text/javascript">
+    new Vue({
+        el: '#$!tableInfo.name',
+        data: {
+            content: '这是第一个vue',
+            li: 'nihao',
+            visible: false
+        },
+        created: function () {
+
+        }
+    })
+</script>

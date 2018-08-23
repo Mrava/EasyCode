@@ -47,7 +47,12 @@ public class TableInfo {
      */
     private String savePath;
     /**
+     * html文件保存路劲
+     */
+    private String htmlSavePath;
+    /**
      * 保存的model名称
      */
     private String saveModelName;
+
 }

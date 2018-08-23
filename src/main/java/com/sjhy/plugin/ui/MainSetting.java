@@ -110,20 +110,22 @@ public class MainSetting extends AbstractService implements Configurable, Config
     @NotNull
     @Override
     public Configurable[] getConfigurables() {
-        Configurable[] result = new Configurable[4];
+        Configurable[] result = new Configurable[5];
         result[0] = new TypeMapperSetting(configInfo);
-        result[1] = new TemplateSettingPanel();
-        result[2] = new TableSettingPanel();
-        result[3] = new GlobalConfigSettingPanel();
+        result[1] = new JavaTemplateSettingPanel();
+        result[2] = new HtmlTemplateSettingPanel();
+        result[3] = new TableSettingPanel();
+        result[4] = new GlobalConfigSettingPanel();
         // 需要重置的列表
         resetList = new ArrayList<>();
         resetList.add(result[0]);
         resetList.add(result[1]);
-        resetList.add(result[3]);
+        resetList.add(result[2]);
+        resetList.add(result[4]);
         // 不需要重置的列表
         saveList = new ArrayList<>();
         saveList.add(this);
-        saveList.add(result[2]);
+        saveList.add(result[3]);
         return result;
     }
 

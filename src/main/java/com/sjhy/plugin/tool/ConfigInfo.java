@@ -45,13 +45,21 @@ public class ConfigInfo implements PersistentStateComponent<ConfigInfo> {
      */
     private Map<String, TypeMapperGroup> typeMapperGroupMap;
     /**
-     * 当前模板组名
+     * 当前java模板组名
      */
-    private String currTemplateGroupName;
+    private String currJavaTemplateGroupName;
     /**
-     * 模板组
+     * java模板组
      */
-    private Map<String, TemplateGroup> templateGroupMap;
+    private Map<String, TemplateGroup> javaTemplateGroupMap;
+    /**
+     * 当前html模板组名
+     */
+    private String currHtmlTemplateGroupName;
+    /**
+     * html模板组
+     */
+    private Map<String, TemplateGroup> htmlTemplateGroupMap;
     /**
      * 当前配置表组名
      */
@@ -103,20 +111,46 @@ public class ConfigInfo implements PersistentStateComponent<ConfigInfo> {
         // 默认编码
         this.encode = "UTF-8";
         // 作者名称
-        this.author = "makejava";
+        this.author = "web+/mrava";
         // 当前各项分组名称
-        this.currTemplateGroupName = DEFAULT_NAME;
-        this.currTypeMapperGroupName = DEFAULT_NAME;
-        this.currColumnConfigGroupName = DEFAULT_NAME;
-        this.currGlobalConfigGroupName = DEFAULT_NAME;
+
         //配置默认模板
-        if (this.templateGroupMap == null) {
-            this.templateGroupMap = new LinkedHashMap<>();
-        }
-        this.templateGroupMap.put(DEFAULT_NAME, loadTemplateGroup(DEFAULT_NAME, "entity", "dao", "service", "serviceImpl", "controller"));
-        this.templateGroupMap.put("MybatisPlus", loadTemplateGroup("MybatisPlus", "entity", "dao", "service", "serviceImpl", "controller"));
+        initJavaTempGroupMap();
+        initHtmlTempGroupMap();
 
         //配置默认类型映射
+        initTypeMapperGroupMap();
+
+        //初始化表配置
+        initColumnConfigGroupMap();
+
+        //初始化全局配置
+        initGlobalConfigGroupMap();
+    }
+
+    private void initGlobalConfigGroupMap() {
+        this.currGlobalConfigGroupName = DEFAULT_NAME;
+        if (this.globalConfigGroupMap == null) {
+            this.globalConfigGroupMap = new LinkedHashMap<>();
+        }
+        this.globalConfigGroupMap.put(DEFAULT_NAME, loadGlobalConfigGroup(DEFAULT_NAME, "init", "define", "autoImport"));
+    }
+
+    private void initColumnConfigGroupMap() {
+        this.currColumnConfigGroupName = DEFAULT_NAME;
+        if (this.columnConfigGroupMap == null) {
+            this.columnConfigGroupMap = new LinkedHashMap<>();
+        }
+        ColumnConfigGroup columnConfigGroup = new ColumnConfigGroup();
+        List<ColumnConfig> columnConfigList = new ArrayList<>();
+        columnConfigList.add(new ColumnConfig("disable", ColumnConfigType.BOOLEAN));
+        columnConfigGroup.setName(DEFAULT_NAME);
+        columnConfigGroup.setElementList(columnConfigList);
+        columnConfigGroupMap.put(DEFAULT_NAME, columnConfigGroup);
+    }
+
+    private void initTypeMapperGroupMap() {
+        this.currTypeMapperGroupName = DEFAULT_NAME;
         if (this.typeMapperGroupMap == null) {
             this.typeMapperGroupMap = new LinkedHashMap<>();
         }
@@ -133,26 +167,32 @@ public class ConfigInfo implements PersistentStateComponent<ConfigInfo> {
         typeMapperList.add(new TypeMapper("datetime", "java.util.Date"));
         typeMapperList.add(new TypeMapper("timestamp", "java.util.Date"));
         typeMapperList.add(new TypeMapper("boolean", "java.lang.Boolean"));
+        typeMapperList.add(new TypeMapper("tinyint(1)", "java.lang.Boolean"));
+        typeMapperList.add(new TypeMapper("tinyint(\\(\\d+\\))?", "java.lang.Integer"));
+        typeMapperList.add(new TypeMapper("longtext", "java.lang.String"));
+        typeMapperList.add(new TypeMapper("decimal\\(\\d+,\\d+\\)", "java.math.BigDecimal"));
+        typeMapperList.add(new TypeMapper("mediumtext", "java.lang.String"));
         typeMapperGroup.setName(DEFAULT_NAME);
         typeMapperGroup.setElementList(typeMapperList);
         typeMapperGroupMap.put(DEFAULT_NAME, typeMapperGroup);
+    }
 
-        //初始化表配置
-        if (this.columnConfigGroupMap == null) {
-            this.columnConfigGroupMap = new LinkedHashMap<>();
+    private void initJavaTempGroupMap() {
+        this.currJavaTemplateGroupName = DEFAULT_NAME;
+        if (this.javaTemplateGroupMap == null) {
+            this.javaTemplateGroupMap = new LinkedHashMap<>();
         }
-        ColumnConfigGroup columnConfigGroup = new ColumnConfigGroup();
-        List<ColumnConfig> columnConfigList = new ArrayList<>();
-        columnConfigList.add(new ColumnConfig("disable", ColumnConfigType.BOOLEAN));
-        columnConfigGroup.setName(DEFAULT_NAME);
-        columnConfigGroup.setElementList(columnConfigList);
-        columnConfigGroupMap.put(DEFAULT_NAME, columnConfigGroup);
+        this.javaTemplateGroupMap.put(DEFAULT_NAME, loadTemplateGroup(DEFAULT_NAME, "entity", "dao", "service", "serviceImpl", "controller"));
+        this.javaTemplateGroupMap.put("SpringDataJpa", loadTemplateGroup("SpringDataJpa", "entity", "dao", "service", "api", "BaseApi", "MsgVo"));
+        this.javaTemplateGroupMap.put("MybatisPlus", loadTemplateGroup("MybatisPlus", "entity", "dao", "service", "serviceImpl", "controller"));
+    }
 
-        //初始化全局配置
-        if (this.globalConfigGroupMap == null) {
-            this.globalConfigGroupMap = new LinkedHashMap<>();
+    private void initHtmlTempGroupMap() {
+        this.currHtmlTemplateGroupName = DEFAULT_NAME;
+        if (this.htmlTemplateGroupMap == null) {
+            this.htmlTemplateGroupMap = new LinkedHashMap<>();
         }
-        this.globalConfigGroupMap.put(DEFAULT_NAME, loadGlobalConfigGroup(DEFAULT_NAME, "init", "define", "autoImport"));
+        this.htmlTemplateGroupMap.put(DEFAULT_NAME, loadTemplateGroup("html", "ElementUI"));
     }
 
     /**
@@ -210,7 +250,7 @@ public class ConfigInfo implements PersistentStateComponent<ConfigInfo> {
     @Override
     public void loadState(@NotNull ConfigInfo configInfo) {
         // 备份初始配置
-        Map<String, TemplateGroup> templateGroupMap = this.getTemplateGroupMap();
+        Map<String, TemplateGroup> templateGroupMap = this.getJavaTemplateGroupMap();
         String version = this.getVersion();
         // 覆盖初始配置
         XmlSerializerUtil.copyBean(configInfo, this);
@@ -222,10 +262,10 @@ public class ConfigInfo implements PersistentStateComponent<ConfigInfo> {
 
         // 合并配置
         templateGroupMap.forEach((name, templateGroup) -> {
-            if (this.getTemplateGroupMap().containsKey(name)) {
+            if (this.getJavaTemplateGroupMap().containsKey(name)) {
                 return;
             }
-            this.getTemplateGroupMap().put(name, templateGroup);
+            this.getJavaTemplateGroupMap().put(name, templateGroup);
         });
     }
 }

@@ -11,13 +11,13 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 
 /**
- * 模板编辑主面板
+ * Html模板编辑主面板
  *
  * @author makejava
  * @version 1.0.0
  * @since 2018/07/18 09:33
  */
-public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Template> implements Configurable {
+public class HtmlTemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Template> implements Configurable {
     /**
      * 配置信息
      */
@@ -30,8 +30,8 @@ public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Temp
     /**
      * 默认构造方法
      */
-    public TemplateSettingPanel() {
-        super(CloneUtils.getInstance().cloneMap(ConfigInfo.getInstance().getTemplateGroupMap()), ConfigInfo.getInstance().getCurrTemplateGroupName());
+    public HtmlTemplateSettingPanel() {
+        super(CloneUtils.getInstance().cloneMap(ConfigInfo.getInstance().getHtmlTemplateGroupMap()), ConfigInfo.getInstance().getCurrHtmlTemplateGroupName());
     }
 
     /**
@@ -64,7 +64,7 @@ public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Temp
 
     @Override
     protected Template createItem(String name) {
-        return new Template(name, "Demo!");
+        return new Template(name, "html Demo!");
     }
 
     /**
@@ -75,7 +75,7 @@ public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Temp
     @Nls
     @Override
     public String getDisplayName() {
-        return "Template Setting";
+        return "Html Template Setting";
     }
 
     /**
@@ -100,7 +100,7 @@ public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Temp
         if (editTemplatePanel != null) {
             editTemplatePanel.refresh();
         }
-        return !configInfo.getTemplateGroupMap().equals(group) || !configInfo.getCurrTemplateGroupName().equals(currGroupName);
+        return !configInfo.getHtmlTemplateGroupMap().equals(group) || !configInfo.getCurrHtmlTemplateGroupName().equals(currGroupName);
     }
 
     /**
@@ -108,8 +108,8 @@ public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Temp
      */
     @Override
     public void apply() {
-        configInfo.setTemplateGroupMap(group);
-        configInfo.setCurrTemplateGroupName(currGroupName);
+        configInfo.setHtmlTemplateGroupMap(group);
+        configInfo.setCurrHtmlTemplateGroupName(currGroupName);
     }
 
     /**
@@ -118,8 +118,8 @@ public class TemplateSettingPanel extends AbstractGroupPanel<TemplateGroup, Temp
     @Override
     public void reset() {
         // 防止对象篡改，需要进行克隆
-        super.group = cloneUtils.cloneMap(configInfo.getTemplateGroupMap());
-        super.currGroupName = configInfo.getCurrTemplateGroupName();
+        super.group = cloneUtils.cloneMap(configInfo.getHtmlTemplateGroupMap());
+        super.currGroupName = configInfo.getCurrHtmlTemplateGroupName();
         super.init();
     }
 

@@ -1,0 +1,72 @@
+##设置回调
+$!callback.setFileName("BaseApi.java")
+$!callback.setSavePath($tool.append($tableInfo.savePath, "/api"))
+
+#if($tableInfo.savePackageName)package $!{tableInfo.savePackageName}.#{end}api;
+
+import $!{tableInfo.savePackageName}.vo.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.util.HashMap;
+import java.util.Map;
+
+
+/**
+* 接口层抽象，封装通用业务接口
+*
+* @author $!author
+* @since $!time.currTime()
+*/
+@Slf4j
+public abstract class BaseApi<PO, DAO extends JpaRepository> {
+    public DAO repository;
+
+    @Autowired
+    public void setRepository(DAO repository) {
+    this.repository = repository;
+    }
+
+    /**
+    * 通用查询接口
+    *
+    * @param po       实体类
+    * @param pageable 分页查询 包含 page|size|sort[**,asc|desc]
+    * @param request
+    * @param response
+    * @return
+    */
+    @RequestMapping("findAll")
+    public MsgVo findAll(PO po, Pageable pageable, HttpServletRequest request, HttpServletResponse response) {
+        Example<PO> poExample = Example.of(po);
+        Page<PO> data = repository.findAll(poExample, pageable);
+        MsgVo msgVo = MsgVo.newInstance();
+        msgVo.setData(data);
+        return msgVo;
+    }
+
+     /**
+     * 通用查询接口描述接口，即实体类的属性。返回给前端参考
+     *
+     * @return
+     */
+    @RequestMapping("profile")
+    public Map<String, String> profile() {
+    Map<String, String> profileMap = new HashMap<>();
+    Class<PO> poClass = (Class<PO>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        Field[] fields = poClass.getDeclaredFields();
+        for (Field field : fields) {
+        profileMap.put(field.getName(), field.getType().getSimpleName());
+        }
+        return profileMap;
+    }
+ }
